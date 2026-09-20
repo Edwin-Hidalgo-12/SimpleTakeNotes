@@ -13,6 +13,10 @@
         android:theme="@style/Theme.SimpleTakeNotes">
         <activity
             android:name=".MainActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".presentation.NotesActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
