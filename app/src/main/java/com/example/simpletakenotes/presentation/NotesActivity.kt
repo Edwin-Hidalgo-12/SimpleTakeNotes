@@ -1,8 +1,11 @@
 package com.example.simpletakenotes.presentation
 
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -14,6 +17,19 @@ class NotesActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityNotesBinding
     private lateinit var adapter: NotesAdapter
+
+    // Escucha: navega a otra pantalla y espera una respuesta de vuelta
+    private val formLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        // Solo entramos aquí con datos si la otra pantalla devolvió RESULT_OK
+        if (result.resultCode == RESULT_OK) {
+            val data = result.data
+            val title = data?.getStringExtra("title")
+            val content = data?.getStringExtra("content")
+            Log.d("NotesActivity", "Recibido -> título: $title | contenido: $content")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,6 +44,7 @@ class NotesActivity : AppCompatActivity() {
         }
 
         initRecyclerView()
+        initListeners()
     }
 
     private fun initRecyclerView() {
@@ -38,6 +55,15 @@ class NotesActivity : AppCompatActivity() {
         binding.recyclerView.layoutManager = layoutManager
 
         if (adapter.itemCount == 0) hideList() else showList()
+    }
+
+    private fun initListeners() {
+        binding.floatingActionButton.setOnClickListener {
+            val intent = Intent(this, FormNoteActivity::class.java)
+            // PRUEBA: quita las dos barras de abajo para ver el modo "Actualización"
+            // intent.putExtra("id", 1)
+            formLauncher.launch(intent)
+        }
     }
 
     private fun hideList() {
