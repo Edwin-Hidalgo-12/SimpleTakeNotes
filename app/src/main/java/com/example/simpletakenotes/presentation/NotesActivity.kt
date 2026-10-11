@@ -1,6 +1,7 @@
 package com.example.simpletakenotes.presentation
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -12,6 +13,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.simpletakenotes.data.NotesDatabase
 import com.example.simpletakenotes.databinding.ActivityNotesBinding
+import com.example.simpletakenotes.domain.models.NoteModel
 
 class NotesActivity : AppCompatActivity() {
 
@@ -22,12 +24,28 @@ class NotesActivity : AppCompatActivity() {
     private val formLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        // Solo entramos aquí con datos si la otra pantalla devolvió RESULT_OK
         if (result.resultCode == RESULT_OK) {
             val data = result.data
-            val title = data?.getStringExtra("title")
-            val content = data?.getStringExtra("content")
-            Log.d("NotesActivity", "Recibido -> título: $title | contenido: $content")
+
+            // Se lee como Parcelable (no como String), según la versión de Android
+            val note: NoteModel? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                data?.getParcelableExtra("note", NoteModel::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                data?.getParcelableExtra("note")
+            }
+
+            // Puede no llegar nada, por eso se valida antes de usarla
+            if (note != null) {
+                note.id = adapter.itemCount + 1 // el siguiente número de la lista
+                Log.d(
+                    "NotesActivity",
+                    "Insertando -> id: ${note.id} | título: ${note.title} | contenido: ${note.content}"
+                )
+                adapter.insertNote(note)
+                binding.recyclerView.scrollToPosition(adapter.itemCount - 1) // baja hasta la nueva nota
+                validateList()
+            }
         }
     }
 
@@ -48,13 +66,14 @@ class NotesActivity : AppCompatActivity() {
     }
 
     private fun initRecyclerView() {
-        adapter = NotesAdapter(NotesDatabase().getFakeNotes())
+        // toMutableList(): el adapter ahora necesita una lista a la que se le pueda agregar
+        adapter = NotesAdapter(NotesDatabase().getFakeNotes().toMutableList())
         val layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
 
         binding.recyclerView.adapter = adapter
         binding.recyclerView.layoutManager = layoutManager
 
-        if (adapter.itemCount == 0) hideList() else showList()
+        validateList()
     }
 
     private fun initListeners() {
@@ -64,6 +83,11 @@ class NotesActivity : AppCompatActivity() {
             // intent.putExtra("id", 1)
             formLauncher.launch(intent)
         }
+    }
+
+    // Muestra la lista si hay notas, o el mensaje de "vacío" si no hay ninguna
+    private fun validateList() {
+        if (adapter.itemCount == 0) hideList() else showList()
     }
 
     private fun hideList() {

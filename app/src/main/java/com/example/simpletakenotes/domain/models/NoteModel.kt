@@ -1,10 +1,11 @@
 package com.example.simpletakenotes.domain.models
 
-import java.util.Date
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 
+@Parcelize
 class NoteModel(
-    val id: Int,
+    var id: Int? = null,
     val title: String,
-    val content: String,
-    val created: Date
-)
+    val content: String
+) : Parcelable

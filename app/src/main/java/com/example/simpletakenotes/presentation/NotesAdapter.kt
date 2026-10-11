@@ -7,7 +7,7 @@ import com.example.simpletakenotes.databinding.ItemNoteBinding
 import com.example.simpletakenotes.domain.models.NoteModel
 
 class NotesAdapter(
-    private val items: List<NoteModel>
+    private val items: MutableList<NoteModel> // MutableList: se le pueden agregar notas
 ) : RecyclerView.Adapter<NotesAdapter.NotesViewHolder>() {
 
     inner class NotesViewHolder(
@@ -26,5 +26,11 @@ class NotesAdapter(
         val note = items[position]
         holder.itemNoteBinding.textViewTitle.text = note.title
         holder.itemNoteBinding.textViewContent.text = note.content
+    }
+
+    // Agrega una nota al final y avisa al RecyclerView que hay un elemento nuevo
+    fun insertNote(note: NoteModel) {
+        items.add(note)
+        notifyItemInserted(items.size - 1)
     }
 }

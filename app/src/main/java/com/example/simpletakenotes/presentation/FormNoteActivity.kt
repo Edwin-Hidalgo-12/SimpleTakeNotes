@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.simpletakenotes.databinding.ActivityFormNoteBinding
+import com.example.simpletakenotes.domain.models.NoteModel
 
 class FormNoteActivity : AppCompatActivity() {
 
@@ -54,11 +55,15 @@ class FormNoteActivity : AppCompatActivity() {
         return title.isNotBlank() && content.isNotBlank()
     }
 
-    // Crea la "cajita" (Intent) con los datos y la devuelve a la pantalla anterior
+    // Arma un NoteModel con los datos del formulario y lo devuelve a la pantalla anterior
     private fun returnResult() {
+        val note = NoteModel(
+            title = binding.editTextTitle.text.toString(),
+            content = binding.editTextContent.text.toString()
+        ) // el id queda en null: lo asigna la lista
+
         val resultIntent = Intent().apply {
-            putExtra("title", binding.editTextTitle.text.toString())
-            putExtra("content", binding.editTextContent.text.toString())
+            putExtra("note", note) // ahora se envía un objeto Parcelable, no un String
         }
         setResult(RESULT_OK, resultIntent)
         finish()
