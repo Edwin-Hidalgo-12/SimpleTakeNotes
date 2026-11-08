@@ -3,15 +3,14 @@ package com.example.simpletakenotes.presentation
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.simpletakenotes.data.NotesDatabase
 import com.example.simpletakenotes.databinding.ActivityNotesBinding
 import com.example.simpletakenotes.domain.models.NoteModel
 
@@ -20,6 +19,8 @@ class NotesActivity : AppCompatActivity() {
     private lateinit var binding: ActivityNotesBinding
     private lateinit var adapter: NotesAdapter
 
+    private val vm: NotesVM by viewModels()
+
     // Escucha: navega a otra pantalla y espera una respuesta de vuelta
     private val formLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -27,7 +28,6 @@ class NotesActivity : AppCompatActivity() {
         if (result.resultCode == RESULT_OK) {
             val data = result.data
 
-            // Se lee como Parcelable (no como String), según la versión de Android
             val note: NoteModel? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 data?.getParcelableExtra("note", NoteModel::class.java)
             } else {
@@ -35,16 +35,13 @@ class NotesActivity : AppCompatActivity() {
                 data?.getParcelableExtra("note")
             }
 
-            // Puede no llegar nada, por eso se valida antes de usarla
             if (note != null) {
-                note.id = adapter.itemCount + 1 // el siguiente número de la lista
-                Log.d(
-                    "NotesActivity",
-                    "Insertando -> id: ${note.id} | título: ${note.title} | contenido: ${note.content}"
-                )
-                adapter.insertNote(note)
-                binding.recyclerView.scrollToPosition(adapter.itemCount - 1) // baja hasta la nueva nota
-                validateList()
+                // Solo se avisa al ViewModel. La lista se actualiza sola gracias al observer.
+                vm.insertNote(note)
+                // post: espera a que la lista termine de dibujarse antes de bajar
+                binding.recyclerView.post {
+                    binding.recyclerView.scrollToPosition(adapter.itemCount - 1)
+                }
             }
         }
     }
@@ -63,31 +60,32 @@ class NotesActivity : AppCompatActivity() {
 
         initRecyclerView()
         initListeners()
+        initObservers()
     }
 
     private fun initRecyclerView() {
-        // toMutableList(): el adapter ahora necesita una lista a la que se le pueda agregar
-        adapter = NotesAdapter(NotesDatabase().getFakeNotes().toMutableList())
+        // El adapter empieza vacío: los datos le llegan por el observer
+        adapter = NotesAdapter(mutableListOf())
         val layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
 
         binding.recyclerView.adapter = adapter
         binding.recyclerView.layoutManager = layoutManager
-
-        validateList()
     }
 
     private fun initListeners() {
         binding.floatingActionButton.setOnClickListener {
             val intent = Intent(this, FormNoteActivity::class.java)
-            // PRUEBA: quita las dos barras de abajo para ver el modo "Actualización"
-            // intent.putExtra("id", 1)
             formLauncher.launch(intent)
         }
     }
 
-    // Muestra la lista si hay notas, o el mensaje de "vacío" si no hay ninguna
-    private fun validateList() {
-        if (adapter.itemCount == 0) hideList() else showList()
+    // La "viejita chismosa" del profe: está atenta a cada cambio de notesObs
+    private fun initObservers() {
+        // this = la Activity (LifecycleOwner): se observa mientras la Activity esté viva
+        vm.notesObs.observe(this) { notes ->
+            adapter.setNotes(notes)
+            if (notes.isEmpty()) hideList() else showList()
+        }
     }
 
     private fun hideList() {

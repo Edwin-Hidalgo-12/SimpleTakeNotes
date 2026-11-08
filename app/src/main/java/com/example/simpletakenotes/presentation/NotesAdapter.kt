@@ -1,5 +1,6 @@
 package com.example.simpletakenotes.presentation
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
@@ -7,7 +8,7 @@ import com.example.simpletakenotes.databinding.ItemNoteBinding
 import com.example.simpletakenotes.domain.models.NoteModel
 
 class NotesAdapter(
-    private val items: MutableList<NoteModel> // MutableList: se le pueden agregar notas
+    private val items: MutableList<NoteModel>
 ) : RecyclerView.Adapter<NotesAdapter.NotesViewHolder>() {
 
     inner class NotesViewHolder(
@@ -28,9 +29,12 @@ class NotesAdapter(
         holder.itemNoteBinding.textViewContent.text = note.content
     }
 
-    // Agrega una nota al final y avisa al RecyclerView que hay un elemento nuevo
-    fun insertNote(note: NoteModel) {
-        items.add(note)
-        notifyItemInserted(items.size - 1)
+    // Reemplaza todas las notas por las que llegan del observable y redibuja la lista.
+    // notifyDataSetChanged() es simple pero redibuja todo; más adelante se mejora con DiffUtil.
+    @SuppressLint("NotifyDataSetChanged")
+    fun setNotes(newNotes: List<NoteModel>) {
+        items.clear()
+        items.addAll(newNotes)
+        notifyDataSetChanged()
     }
 }
